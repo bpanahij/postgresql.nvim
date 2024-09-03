@@ -60,12 +60,16 @@ local function load_connection_vars()
 		"connection_string",
 		function(conn_string)
 			local env = parse_connection_string(conn_string)
-			print(env)
 			vim.env.PG_HOST = env.host
 			vim.env.PG_PORT = env.port
 			vim.env.PG_USER = env.user
 			vim.env.PG_PASSWORD = env.password
 			vim.env.PG_DATABASE = env.dbname
+			print("PG_HOST: " .. vim.env.PG_HOST)
+			print("PG_PORT: " .. vim.env.PG_PORT)
+			print("PG_USER: " .. vim.env.PG_USER)
+			print("PG_PASSWORD: " .. vim.env.PG_PASSWORD)
+			print("PG_DATABASE: " .. vim.env.PG_DATABASE)
 		end
 	)
 end
