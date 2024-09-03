@@ -63,17 +63,13 @@ local function load_connection_vars()
 		return env
 	end
 
-	local function set_vim_env(key, value)
-		vim.cmd(string.format("let $%s = '%s'", key, value))
-	end
-
 	local function set_env_vars(conn_string)
 		local env = parse_connection_string(conn_string)
-		set_vim_env("PG_HOST", env.host)
-		set_vim_env("PG_PORT", env.port)
-		set_vim_env("PG_USER", env.user)
-		set_vim_env("PG_PASSWORD", env.password)
-		set_vim_env("PG_DATABASE", env.dbname)
+		vim.fn.setenv("PG_HOST", env.host)
+		vim.fn.setenv("PG_PORT", env.port)
+		vim.fn.setenv("PG_USER", env.user)
+		vim.fn.setenv("PG_PASSWORD", env.password)
+		vim.fn.setenv("PG_DATABASE", env.dbname)
 		print("PG_HOST: " .. vim.env.PG_HOST)
 		print("PG_PORT: " .. vim.env.PG_PORT)
 		print("PG_USER: " .. vim.env.PG_USER)
@@ -103,7 +99,9 @@ local function load_connection_vars()
 		if data then
 			result = result .. data
 		else
-			set_env_vars(result)
+			vim.schedule(function()
+				set_env_vars(result)
+			end)
 		end
 	end)
 
