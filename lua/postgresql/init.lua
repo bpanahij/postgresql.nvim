@@ -14,6 +14,7 @@ local finders = require("telescope.finders")
 local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
+local previewers = require("telescope.previewers")
 
 function M.setup(opts)
 	opts = opts or {}
@@ -276,6 +277,44 @@ function M.show_results(results)
 	local headers = vim.split(results[1], "|")
 	table.remove(results, 1) -- Remove header row from results
 
+	local previewer = previewers.new_buffer_previewer({
+		title = "Row Details",
+		define_preview = function(self, entry, status)
+			local preview_text = {}
+			for i, header in ipairs(headers) do
+				local value = entry.value[i] or ""
+				if value:match("^%s*{") or value:match("^%s*%[") then
+					value = prettify_json(value)
+					table.insert(preview_text, string.format("%s:", header))
+					for _, json_line in ipairs(vim.split(value, "\n")) do
+						table.insert(preview_text, "  " .. json_line)
+					end
+				else
+					table.insert(preview_text, string.format("%s: %s", header, value))
+				end
+			end
+			vim.api.nvim_buf_set_lines(self.state.bufnr, 0, -1, false, preview_text)
+
+			-- Set up syntax highlighting for the preview buffer
+			vim.api.nvim_buf_set_option(self.state.bufnr, "syntax", "ON")
+			vim.api.nvim_command([[
+                syntax clear
+                syntax match SqlResultHeader /^\w\+:/
+                syntax match SqlResultValue /:\s\+\zs.*$/
+                syntax region SqlJsonBlock start=/{/ end=/}/ contains=SqlJsonProperty,SqlJsonString,SqlJsonNumber fold
+                syntax match SqlJsonProperty /"[^"]*":/
+                syntax region SqlJsonString start=/"/ skip=/\\"/ end=/"/
+                syntax match SqlJsonNumber /-\?\d\+\(\.\d\+\)\?\([eE][+-]\?\d\+\)\?/
+                highlight SqlResultHeader ctermfg=Yellow guifg=#FFFF00
+                highlight SqlResultValue ctermfg=LightBlue guifg=#ADD8E6
+                highlight SqlJsonBlock ctermfg=Green guifg=#90EE90
+                highlight SqlJsonProperty ctermfg=Cyan guifg=#00FFFF
+                highlight SqlJsonString ctermfg=LightGreen guifg=#98FB98
+                highlight SqlJsonNumber ctermfg=Magenta guifg=#FF00FF
+            ]])
+		end,
+	})
+
 	pickers
 		.new({}, {
 			prompt_title = "PostgreSQL Query Results",
@@ -293,6 +332,7 @@ function M.show_results(results)
 				end,
 			}),
 			sorter = conf.generic_sorter({}),
+			previewer = previewer,
 			attach_mappings = function(prompt_bufnr, map)
 				actions.select_default:replace(function()
 					actions.close(prompt_bufnr)
