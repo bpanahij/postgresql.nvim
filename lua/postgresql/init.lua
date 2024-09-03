@@ -70,11 +70,6 @@ local function load_connection_vars()
 		vim.fn.setenv("PG_USER", env.user)
 		vim.fn.setenv("PG_PASSWORD", env.password)
 		vim.fn.setenv("PG_DATABASE", env.dbname)
-		print("PG_HOST: " .. vim.env.PG_HOST)
-		print("PG_PORT: " .. vim.env.PG_PORT)
-		print("PG_USER: " .. vim.env.PG_USER)
-		print("PG_PASSWORD: " .. vim.env.PG_PASSWORD)
-		print("PG_DATABASE: " .. vim.env.PG_DATABASE)
 	end
 
 	local cmd = "op read op://personal/PostgreSQLConnection/connection_string --no-newline"
