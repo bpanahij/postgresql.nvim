@@ -55,23 +55,60 @@ local function loadConfigFromCommand(command, optionName, callback, defaultValue
 end
 
 local function load_connection_vars()
-	loadConfigFromCommand(
-		"op read op://personal/PostgreSQLConnection/connection_string --no-newline",
-		"connection_string",
-		function(conn_string)
-			local env = parse_connection_string(conn_string)
-			vim.env.PG_HOST = env.host
-			vim.env.PG_PORT = env.port
-			vim.env.PG_USER = env.user
-			vim.env.PG_PASSWORD = env.password
-			vim.env.PG_DATABASE = env.dbname
-			print("PG_HOST: " .. vim.env.PG_HOST)
-			print("PG_PORT: " .. vim.env.PG_PORT)
-			print("PG_USER: " .. vim.env.PG_USER)
-			print("PG_PASSWORD: " .. vim.env.PG_PASSWORD)
-			print("PG_DATABASE: " .. vim.env.PG_DATABASE)
+	local function parse_connection_string(conn_string)
+		local env = {}
+		for k, v in conn_string:gmatch("(%w+)=([^%s]+)") do
+			env[k] = v
 		end
-	)
+		return env
+	end
+
+	local function set_env_vars(conn_string)
+		local env = parse_connection_string(conn_string)
+		vim.env.PG_HOST = env.host
+		vim.env.PG_PORT = env.port
+		vim.env.PG_USER = env.user
+		vim.env.PG_PASSWORD = env.password
+		vim.env.PG_DATABASE = env.dbname
+		print("PG_HOST: " .. vim.env.PG_HOST)
+		print("PG_PORT: " .. vim.env.PG_PORT)
+		print("PG_USER: " .. vim.env.PG_USER)
+		print("PG_PASSWORD: " .. vim.env.PG_PASSWORD)
+		print("PG_DATABASE: " .. vim.env.PG_DATABASE)
+	end
+
+	local cmd = "op read op://personal/PostgreSQLConnection/connection_string --no-newline"
+	local stdout = vim.loop.new_pipe(false)
+	local stderr = vim.loop.new_pipe(false)
+
+	local handle
+	handle = vim.loop.spawn("sh", {
+		args = { "-c", cmd },
+		stdio = { nil, stdout, stderr },
+	}, function(code, signal)
+		stdout:read_stop()
+		stderr:read_stop()
+		stdout:close()
+		stderr:close()
+		handle:close()
+	end)
+
+	local result = ""
+	stdout:read_start(function(err, data)
+		assert(not err, err)
+		if data then
+			result = result .. data
+		else
+			set_env_vars(result)
+		end
+	end)
+
+	stderr:read_start(function(err, data)
+		assert(not err, err)
+		if data then
+			print("Error: " .. data)
+		end
+	end)
 end
 -- Use one password and the above loadConfigFromCommand to populate the env variable just like the function
 -- load_env_variables does
