@@ -4,10 +4,7 @@ local fn = vim.fn
 
 -- At the top of your file, add:
 local json = require("plenary.json")
-
-function M.setup(opts)
-	opts = opts or {}
-end
+local job = require("plenary.job")
 
 -- The rest of your code remains the same...
 
@@ -18,15 +15,74 @@ local conf = require("telescope.config").values
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 
+function M.setup(opts)
+	opts = opts or {}
+end
+
+local function parse_connection_string(conn_string)
+	local env = {}
+	for key, value in conn_string:gmatch("(%w+)=([^;]+)") do
+		env[key:lower()] = value
+	end
+	return env
+end
+
+local function splitCommandIntoTable(command)
+	local cmd = {}
+	for word in command:gmatch("%S+") do
+		table.insert(cmd, word)
+	end
+	return cmd
+end
+
+local function loadConfigFromCommand(command, optionName, callback, defaultValue)
+	local cmd = splitCommandIntoTable(command)
+	job:new({
+		command = cmd[1],
+		args = vim.list_slice(cmd, 2, #cmd),
+		on_exit = function(j, exit_code)
+			if exit_code ~= 0 then
+				return
+			end
+			local value = j:result()[1]:gsub("%s+$", "")
+			if value ~= nil and value ~= "" then
+				callback(value)
+			elseif defaultValue ~= nil and defaultValue ~= "" then
+				callback(defaultValue)
+			end
+		end,
+	}):start()
+end
+
+local function load_connection_vars()
+	loadConfigFromCommand(
+		"op read op://personal/PostgreSQLConnection/connection_string --no-newline",
+		"connection_string",
+		function(conn_string)
+			local env = parse_connection_string(conn_string)
+			vim.env.PG_HOST = env.host
+			vim.env.PG_PORT = env.port
+			vim.env.PG_USER = env.user
+			vim.env.PG_PASSWORD = env.password
+			vim.env.PG_DATABASE = env.dbname
+		end
+	)
+end
+-- Use one password and the above loadConfigFromCommand to populate the env variable just like the function
+-- load_env_variables does
+-- op read op://personal/TavusProd/port --no-newline
+
 -- Function to load environment variables
 local function load_env_variables()
+	load_connection_vars() -- Call this first to populate env variables
+
 	local env = {
-		host = os.getenv("PG_HOST"),
-		port = os.getenv("PG_PORT"),
-		user = os.getenv("PG_USER"),
-		password = os.getenv("PG_PASSWORD"),
-		database = os.getenv("PG_DATABASE"),
-		psql_path = os.getenv("PSQL_PATH") or "psql",
+		host = vim.env.PG_HOST,
+		port = vim.env.PG_PORT,
+		user = vim.env.PG_USER,
+		password = vim.env.PG_PASSWORD,
+		database = vim.env.PG_DATABASE,
+		psql_path = vim.env.PSQL_PATH or "psql",
 	}
 	for k, v in pairs(env) do
 		if not v and k ~= "psql_path" then
