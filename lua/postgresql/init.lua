@@ -60,6 +60,7 @@ local function load_connection_vars()
 		"connection_string",
 		function(conn_string)
 			local env = parse_connection_string(conn_string)
+			print(env)
 			vim.env.PG_HOST = env.host
 			vim.env.PG_PORT = env.port
 			vim.env.PG_USER = env.user
