@@ -57,7 +57,7 @@ end
 local function load_connection_vars()
 	local function parse_connection_string(conn_string)
 		local env = {}
-		for k, v in conn_string:gmatch("(%w+)=([^%s]+)") do
+		for k, v in conn_string:gmatch("(%w+)=([^;]+)") do
 			env[k] = v
 		end
 		return env
