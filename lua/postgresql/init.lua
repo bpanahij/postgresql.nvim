@@ -28,33 +28,6 @@ local function parse_connection_string(conn_string)
 	return env
 end
 
-local function splitCommandIntoTable(command)
-	local cmd = {}
-	for word in command:gmatch("%S+") do
-		table.insert(cmd, word)
-	end
-	return cmd
-end
-
-local function loadConfigFromCommand(command, optionName, callback, defaultValue)
-	local cmd = splitCommandIntoTable(command)
-	job:new({
-		command = cmd[1],
-		args = vim.list_slice(cmd, 2, #cmd),
-		on_exit = function(j, exit_code)
-			if exit_code ~= 0 then
-				return
-			end
-			local value = j:result()[1]:gsub("%s+$", "")
-			if value ~= nil and value ~= "" then
-				callback(value)
-			elseif defaultValue ~= nil and defaultValue ~= "" then
-				callback(defaultValue)
-			end
-		end,
-	}):start()
-end
-
 local function load_connection_vars()
 	local function parse_connection_string(conn_string)
 		local env = {}
@@ -110,7 +83,7 @@ local function load_connection_vars()
 end
 -- Use one password and the above loadConfigFromCommand to populate the env variable just like the function
 -- load_env_variables does
--- op read op://personal/TavusProd/port --no-newline
+-- op read op://personal/brian/port --no-newline
 
 -- Function to load environment variables
 local function load_env_variables()
